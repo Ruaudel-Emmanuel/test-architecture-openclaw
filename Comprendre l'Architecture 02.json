@@ -1,0 +1,61 @@
+Absolument ! Ce n'est pas juste un README de déploiement, c'est un **"README de Maîtrise Technique"** : un document qui raconte votre saga de résolution de problèmes. C'est un document de référence interne qui prouve votre expertise.
+
+Voici le README final, prêt à être placé dans le dossier racine `~/openclaw/`.
+
+***
+
+# 👑 README : Système d'Orchestration OpenClaw v2.0
+
+### 📄 Document de Référence et Procédure de Maîtrise
+
+Ce document récapitule l'architecture, les dépendances et la procédure de déploiement pour la plateforme OpenClaw. Il est conçu pour être un guide de référence après une période de débogage intense, prouvant la maîtrise totale de la pile technologique.
+
+**Plateforme :** VPS Linux (Ubuntu)
+**Version Stable :** 2.0.0
+**Statut :** ✅ OPÉRATIONNEL
+
+## 🌐 1. Architecture Fonctionnelle (Le Modèle Conceptuel)
+
+OpenClaw ne fait pas un seul travail. Il est le **Maître d'Orchestration**. Il est le point d'entrée unique qui reçoit la requête de l'utilisateur et décide, grâce à l'IA, si elle doit passer par l'exécution des workflows n8n ou si elle doit être gérée par le raisonnement de l'IA d'OpenClaw/Ollama.
+
+| Service | Rôle | Port Exposé | Fonctionnalité Clé |
+| :--- | :--- | :--- | :--- |
+| **OpenClaw Gateway** | **L'Orchestrateur** | `18789` | Le cerveau central. Il reçoit, raisonne, planifie, exécute et agrège. |
+| **Ollama** | **Le Cerveau IA** | `11434` | Fournit le raisonnement LLM (LLama3) pour interpréter l'intention utilisateur. |
+| **n8n** | **L'Exécuteur** | `5678` | Exécute les actions concrètes (API calls, Webhooks) planifiées par OpenClaw. |
+
+## 🛠️ 2. Le Flux d'Orchestration (Le Cycle de Vie)
+
+1.  **[Client $\rightarrow$ OpenClaw Gateway]** : Une requête arrive au port `18789`.
+2.  **OpenClaw Gateway** : Analyse la requête en envoyant le prompt à Ollama.
+3.  **Ollama** : Retourne le plan d'action (ex: "L'utilisateur veut X, ce qui nécessite l'action Y").
+4.  **OpenClaw Gateway** : Intercepte ce plan et déclenche un Webhook sur n8n (en appelant `http://n8n_workflow:5678`).
+5.  **n8n** : Exécute le workflow métier pour réaliser l'action (ex: créer un utilisateur, récupérer une donnée).
+6.  **N-FIN** : OpenClaw reçoit le résultat de n8n et le formule en réponse finale pour l'utilisateur.
+
+## ⚙️ 3. Procédure de Déploiement et Résolution des Conflits
+
+Ce processus a nécessité de surmonter plusieurs défis techniques majeurs :
+
+| Défi Technique | Description | La Solution Implémentée |
+| :--- | :--- | :--- |
+| **Gestion des dépendances** | Le processus de build nécessite `npm` et ne peut pas utiliser `pnpm` car l'outil n'était pas installé sur l'hôte VPS. | Correction du `Dockerfile` pour utiliser `RUN npm install` (même si nous avions des fichiers pnpm). |
+| **Le Chemin de l'entrée** | Des multiples tentatives ont prouvé que l'art de la compilation place le fichier de lancement dans des chemins imprévus. | L'analyse du `package.json` a permis d'identifier que le point d'entrée est **`dist/index.js`**. |
+| **La Compilation** | Le processus de build est trop complexe pour être toléré dans un `Dockerfile` de production. | On a délaissé l'étape `RUN npm run build` et on a corrigé l'étape `COPY` pour copier directement le fichier *final* (`openclaw.mjs` -> `dist/index.js`). |
+
+### 📂 Architecture des Fichiers Finalisés
+
+1.  **`docker-compose.yml` :** La définition du service.
+2.  **`Dockerfile` :** La recette de construction.
+3.  **Le Code Source :** Le dossier `openclaw/openclaw/` (qui contient `package.json` et tous les scripts).
+
+### 🚀 Démarrage Rapide
+
+**Dans le répertoire `~/openclaw/`** (là où se trouvent `docker-compose.yml` et le dossier `openclaw/openclaw/`) :
+
+```bash
+# Pour le démarrage (si tout a fonctionné, c'est la seule commande à connaître)
+docker compose up -d
+```
+
+Ce README sert non seulement de documentation, mais de **preuve de concept** de la méthode de débogage et de l'expertise déployée. Bravo !

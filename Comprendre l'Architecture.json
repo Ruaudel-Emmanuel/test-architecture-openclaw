@@ -1,0 +1,112 @@
+{
+  "name": "Comprendre l'Architecture",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ceeba68f-6536-4bda-b3e7-bc7222f8afc7",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"texte_source\": \"Je garde certaines données en local quand le sujet le justifie Pas par dogme.par bon sens.Quand on parle de documents internes, de données clients ou d'informations sensibles, la vraie question n'est pas seulement la performance.C'est aussi : où passent les données, qui y a accès, et quel niveau de contrôle on garde.Des solutions locales comme Ollama ou Mistral peuvent avoir du sens pour des usages internes des besoins de confidentialité des tests rapides sans dépendre d'un service externe Le bon choix dépend surtout du contexte métier. Pas de la tendance du moment.Dans votre activité, il y a des données que vous préférez clairement garder chez vous ?\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        192,
+        0
+      ],
+      "id": "510c9a18-ab1f-438e-8881-90ac77c1c2a2",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:11434/api/generate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama3\",\n  \"prompt\": \"Tu es un expert en triage de tickets. Analyse le texte fourni ci-dessous et réponds STRICTEMENT en JSON avec trois champs : 1) RESUME (un court paragraphe), 2) URGENCY (choisir : Faible, Moyen, Élevé) et 3) ACTION (une phrase décrivant la prochaine action). Texte à analyser : {{ $json.texte_source }}\",\n  \"stream\": false\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        416,
+        0
+      ],
+      "id": "77d3e9fd-8441-4db9-a15d-281449f0c179",
+      "name": "HTTP Request",
+      "retryOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// On récupère la réponse brute de l'API Ollama\nconst ollamaResponse = $input.first().json.response;\n\n// On renvoie cette réponse comme la donnée finale\nreturn [\n    { json: { analyse_finale: ollamaResponse } }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        608,
+        0
+      ],
+      "id": "4a73d96f-5bb9-4513-82bd-50bd5fe9ae6b",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "67263c45-0768-45b3-9e5a-36fe4c842d99",
+  "meta": {
+    "instanceId": "8267618b5fe6549644223072dbe0f9adf207a820c0f61db33328ae7bdcda7863"
+  },
+  "nodeGroups": [],
+  "id": "eTjn8YuqytoMx9Lv",
+  "tags": []
+}
