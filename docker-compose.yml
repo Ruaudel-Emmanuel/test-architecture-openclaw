@@ -1,0 +1,81 @@
+
+services:
+  # ============================================================
+  # 🧠 OLLAMA LLM ENGINE (Service modifiée : Port 11435)
+  # ============================================================
+  ollama_engine:
+    image: ollama/ollama:latest
+    container_name: ollama_engine
+    # Modification cruciale pour éviter le conflit de port 11434
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11435
+    ports:
+      # L'hôte et le conteneur utilisent maintenant le même port libéré (11435)
+      - "11435:11435" 
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    # N'ajoutons rien ici pour le moment, le défaut est suffisant.
+
+  # ============================================================
+  # 🛡️ N8N WORKFLOW AUTOMATION SERVICE (Statut : inchangé)
+  # ============================================================
+  n8n_workflow:
+    image: n8nio/n8n:latest
+    container_name: n8n_workflow
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/n8n/.n8n
+    environment:
+      # !!! Laissez vos variables d'environnement comme elles sont !!!
+      - DB_TYPE=sqlite
+      - DB_POSTGRES_HOST=localhost
+      - DB_POSTGRES_PORT=5432
+      - DB_POSTGRES_USER=n8n_user
+      - DB_POSTGRES_PASSWORD=votre_mot_de_passe_secret
+      - DB_POSTGRES_DATABASE=n8n_db
+      - WEBHOOK_URL=https://n8n.rennesdev.fr
+      - N8N_HOST=vps-5532a57a.votre-domaine.com
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_PORT=5678
+      - N8N_BASIC_AUTH_USER=admin_n8n
+      - N8N_BASIC_AUTH_PASSWORD=VOTRE_MOT_DE_PASSE_SECRETO
+      - N8N_SECRET_KEY=une_cle_secrete_tres_longue_et_unique
+      - N8N_CUSTOM_TRUST_PROXY=true
+    restart: unless-stopped
+
+  # ============================================================
+  # 🌐 OPENCLAW ORCHESTRATOR GATEWAY (Service modifié)
+  # ============================================================
+  openclaw_gateway:
+    build:
+      context: ./openclaw/
+      dockerfile: Dockerfile
+    container_name: openclaw_gateway
+    ports:
+      # Ports exposés (Maintenus tels quels)
+      - "18789:18789"
+      - "18790:18790"
+      - "3978:3978"
+    env_file:
+      - path: .env
+        required: false
+    # IMPORTANT : AJOUTER LES VARIABLES DE PORT MODIFIÉES
+    environment:
+      - OPENCLAW_GATEWAY_PORT: "18789"
+      - OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:-}
+      - OPENCLAW_MSTEAMS_PORT: "3978"
+      # ICI, c'est CRUCIAL. Vous devez définir que l'endpoint Ollama est sur le nouveau port
+      - OLLAMA_API_PORT: "11435" 
+      - OLLAMA_API_HOST: "ollama_engine:11435"
+
+    # Les volumes sont également importants et doivent être conservés
+    volumes:
+      - "${OPENCLAW_CONFIG_DIR:-${HOME:-/tmp}/.openclaw}:/home/node/.openclaw"
+      - "${OPENCLAW_WORKSPACE_DIR:-${HOME:-/tmp}/.openclaw/workspace}:/home/node/workspace"
+    restart: unless-stopped
+    
+volumes:
+  n8n_data:
+  ollama_data:
